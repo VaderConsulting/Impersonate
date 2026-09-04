@@ -21,6 +21,10 @@ VS 2008 VB.NET class library (.NET 3.5) working copy. ProcessAsUser duplicates e
 
 Open `Impersonate.sln` in Visual Studio.
 
+## Requirements
+
+- Visual Studio 2008, .NET Framework 3.5
+
 ## Attribution and provenance
 
 - **Assembly company:** Microsoft
