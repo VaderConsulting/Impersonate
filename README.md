@@ -1,6 +1,6 @@
 # Impersonate
 
-VS 2008 VB.NET class library (.NET 3.5) working copy. ProcessAsUser duplicates explorer.exe's primary token and CreateProcessAsUser-launches a command line on the default WinSta0 desktop. ProcessAsUser2 tries eight LogonUser, DuplicateTokenEx, CreateProcessWithLogonW, and WindowsIdentity.Impersonate methods; sample usernames and passwords are gitignored (see ProcessAsUser2.vb.example). Open `Impersonate.sln`. This is a historical working copy from Dave Robinson / VaderConsulting.
+VS 2008 VB.NET class library (.NET 3.5) working copy. ProcessAsUser duplicates explorer.exe's primary token and CreateProcessAsUser-launches a command line on the default WinSta0 desktop. ProcessAsUser2 tries eight LogonUser, DuplicateTokenEx, CreateProcessWithLogonW, and WindowsIdentity.Impersonate methods; sample usernames and passwords are gitignored (see ProcessAsUser2.vb.example). Open `Impersonate.sln`. This is a historical working copy from Dave Robinson / Vader Consulting.
 
 **Source last updated:** 2010-05-03  
 **Language:** VB.NET  
@@ -9,7 +9,7 @@ VS 2008 VB.NET class library (.NET 3.5) working copy. ProcessAsUser duplicates e
 
 ## What it is
 
-VS 2008 VB.NET class library (.NET 3.5) working copy. ProcessAsUser duplicates explorer.exe's primary token and CreateProcessAsUser-launches a command line on the default WinSta0 desktop. ProcessAsUser2 tries eight LogonUser, DuplicateTokenEx, CreateProcessWithLogonW, and WindowsIdentity.Impersonate methods; sample usernames and passwords are gitignored (see ProcessAsUser2.vb.example). Open `Impersonate.sln`. This is a historical working copy from Dave Robinson / VaderConsulting.
+VS 2008 VB.NET class library (.NET 3.5) working copy. ProcessAsUser duplicates explorer.exe's primary token and CreateProcessAsUser-launches a command line on the default WinSta0 desktop. ProcessAsUser2 tries eight LogonUser, DuplicateTokenEx, CreateProcessWithLogonW, and WindowsIdentity.Impersonate methods; sample usernames and passwords are gitignored (see ProcessAsUser2.vb.example). Open `Impersonate.sln`. This is a historical working copy from Dave Robinson / Vader Consulting.
 
 ## Solution structure
 
